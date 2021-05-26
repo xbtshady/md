@@ -1,5 +1,9 @@
 # 面试题整理
 
+[TOC]
+
+
+
 ## java 基础
 
 #### Java是解释运行吗？
@@ -120,19 +124,186 @@
   - 在运行时，字符串的一些基础操作会直接利用 JVM 内部的 Intrinsic 机制，往往运行的就是特殊优化的本地代码，而根本就不是 Java 代码生成的字节码。Intrinsic 可以简单理解为，是一种利用 native 方式 hard-coded 的逻辑，算是一种特别的内联，很多优化还是需要直接使用特定的 CPU 指令
   - Java 的String，在历史版本中，它是使用 char 数组来存数据的，这样非常直接。但是 Java 中的 char 是两个 bytes 大小，拉丁语系语言的字符，根本就不需要太宽的 char，这样无区别的实现就造成了一定的浪费。在 Java 9 中，我们引入了 Compact Strings 的设计，对字符串进行了大刀阔斧的改进。将数据存储方式从 char 数组，改变为一个 byte 数组加上一个标识编码的所谓 coder，并且将相关字符串操作类都进行了修改。另外，所有相关的 Intrinsic 之类也都进行了重写，以保证没有任何性能损失。
 
+#### 动态代理是基于什么原理？
 
+代理模式
 
+#### int和Integer有什么区别？
 
+- int 是我们常说的整形数字，是 Java 的 8 个原始数据类型（Primitive Types，boolean、byte 、short、char、int、float、double、long）之一
 
+- Integer 是 int 对应的包装类，它有一个 int 类型的字段存储数据，并且提供了基本操作，比如数学运算、int 和字符串之间转换等。在 Java 5 中，引入了自动装箱和自动拆箱功能（boxing/unboxing），Java 可以根据上下文，自动进行转换，极大地简化了相关编程
 
+- 缓存机制
 
+  Integer 在 Java 5 中新增了静态工厂方法 valueOf，在调用它的时候会利用一个缓存机制，带来了明显的性能改进。按照 Javadoc，这个值默认缓存是 -128 到 127 之间。
 
+  Boolean，缓存了 true/false 对应实例，确切说，只会返回两个常量实例 Boolean.TRUE/FALSE。
 
+  Short，同样是缓存了 -128 到 127 之间的数值。
 
+  Byte，数值有限，所以全部都被缓存。
 
+  Character，缓存范围’\u0000’ 到 ‘\u007F’
 
+- 自动装箱、拆箱
 
+  自动装箱实际上算是一种语法糖。(什么是语法糖？可以简单理解为 Java 平台为我们自动进行了一些转换，保证不同的写法在运行时等价，它们发生在编译阶段，也就是生成的字节码是一致的)。
 
+  javac 替我们自动把装箱转换为 Integer.valueOf()，把拆箱替换为 Integer.intValue()，
 
+  
 
+#### 对比Vector、ArrayList、LinkedList有何区别？
+
+实现：
+
+- Vector 是 Java 早期提供的线程安全的动态数组，如果不需要线程安全，并不建议选择，毕竟同步是有额外开销的。Vector 内部是使用对象数组来保存数据，可以根据需要自动的增加容量，当数组已满时，会创建新的数组，并拷贝原有数组数据。
+- ArrayList 是应用更加广泛的动态数组实现，它本身不是线程安全的，所以性能要好很多。与 Vector 近似，ArrayList 也是可以根据需要调整容量，不过两者的调整逻辑有所区别，Vector 在扩容时会提高 1 倍，而 ArrayList 则是增加 50%。
+- LinkedList 顾名思义是 Java 提供的双向链表，所以它不需要像上面两种那样调整容量，它也不是线程安全的。
+
+场景：
+
+- Vector 和 ArrayList 作为动态数组，其内部元素以数组形式顺序存储的，所以非常适合随机访问的场合。除了尾部插入和删除元素，往往性能会相对较差，比如我们在中间位置插入一个元素，需要移动后续所有元素。
+
+- 而 LinkedList 进行节点插入、删除却要高效得多，但是随机访问性能则要比动态数组慢。
+
+  
+
+#### Java 提供的默认排序算法，具体是什么排序方式
+
+还需要再清楚：
+
+- 需要区分是 Arrays.sort() 还是 Collections.sort() （底层是调用 Arrays.sort()）；
+
+- 什么数据类型；
+
+- 多大的数据集（太小的数据集，复杂排序是没必要的，Java 会直接进行二分插入排序）等。
+
+详情：
+
+- 对于原始数据类型，目前使用的是所谓双轴快速排序（Dual-Pivot QuickSort），是一种改进的快速排序算法，早期版本是相对传统的快速排序
+- 而对于对象数据类型，目前则是使用TimSort，思想上也是一种归并和二分插入排序（binarySort）结合的优化排序算法。TimSort 并不是 Java 的独创，简单说它的思路是查找数据集中已经排好序的分区（这里叫 run），然后合并这些分区来达到排序的目的。
+- 另外，Java 8 引入了并行排序算法（直接使用 parallelSort 方法），这是为了充分利用现代多核处理器的计算能力，底层实现基于 fork-join 框架（专栏后面会对 fork-join 进行相对详细的介绍），当处理的数据集比较小的时候，差距不明显，甚至还表现差一点；但是，当数据集增长到数万或百万以上时，提高就非常大了，具体还是取决于处理器和系统环境
+
+#### 对比Hashtable、HashMap、TreeMap有什么不同？
+
+​	Hashtable、HashMap、TreeMap 都是最常见的一些 Map 实现，是以键值对的形式存储和操作数据的容器类型。
+
+- Hashtable 是早期 Java 类库提供的一个哈希表实现，本身是同步的，不支持 null 键和值，由于同步导致的性能开销，所以已经很少被推荐使用。
+- HashMap 是应用更加广泛的哈希表实现，行为上大致上与 HashTable 一致，主要区别在于 HashMap 不是同步的，支持 null 键和值等。通常情况下，HashMap 进行 put 或者 get 操作，可以达到常数时间的性能。
+- TreeMap 则是基于红黑树的一种提供顺序访问的 Map，和 HashMap 不同，它的 get、put、remove 之类操作都是 O（log(n)）的时间复杂度，具体顺序可以由指定的 Comparator 来决定，或者根据键的自然顺序来判断。
+
+#### LinkedHashMap 和 TreeMap 保证顺序的区别
+
+- LinkedHashMap 通常提供的是遍历顺序符合插入顺序，它的实现是通过为条目（键值对）维护一个双向链表。注意，通过特定构造函数，我们可以创建反映访问顺序的实例，所谓的 put、get、compute 等，都算作“访问”
+- 对于 TreeMap，它的整体顺序是由键的顺序关系决定的，通过 Comparator 或 Comparable（自然顺序）来决定。
+
+#### hashCode 和 equals 的一些基本约定
+
+- equals 相等，hashCode 一定要相等。
+- 重写了 hashCode 也要重写 equals。
+- hashCode 需要保持一致性，状态改变返回的哈希值仍然要一致。
+- equals 的对称、反射、传递等特性。
+
+#### HashMap 源码分析
+
+- HashMap 内部实现基本点分析。
+
+  - HashMap 内部的结构是数组（Node[] table）和链表结合组成的复合结构，数组被分为一个个桶（bucket），通过哈希值决定了键值对在这个数组的寻址；哈希值相同的键值对，则以链表形式存储，这里需要注意的是，链表长度大于8(TREEIFY_THRESHOLD)且tab(MIN_TREEIFY_CAPACITY)长度大于64才会树化
+
+    ![img](https://static001.geekbang.org/resource/image/1f/56/1f72306a9d8719c66790b56ef7977c56.png)
+
+  - HashMap在首次使用时才被初始化（拷贝构造函数除外），如put,
+
+  - resize 方法兼顾两个职责，创建初始存储表格，或者在容量不满足需求的时候，进行扩容（resize）。
+
+  - 具体键值对在哈希表中的位置（数组 index）取决于`i = (n - 1) & hash`，（n数组大小，键值的hash哈希值）
+
+  - put方法
+
+    ```java
+    //put方法重点
+    final V putVal(int hash, K key, V value, boolean onlyIfAbent, boolean evit) {
+        Node<K,V>[] tab; 
+        Node<K,V> p; 
+        int i;
+        if ((tab = table) == null || (n = tab.length) = 0)
+            //如果table是空或者tab.length=0hashmap需要初始化resize()
+            n = (tab = resize()).length;
+        if ((p = tab[i = (n - 1) & hash]) == ull)
+            //判断链表是否为空
+            tab[i] = newNode(hash, key, value, nll);
+        else {
+            // ...
+            //判断链表长度是否大于TREEIFY_THRESHOLD 若大于需要树化
+            if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for first 
+               treeifyBin(tab, hash);
+            //  ... 
+         }
+    }
+    ```
+
+  - resize 方法
+
+    ```java
+    
+    final Node<K,V>[] resize() {
+        // ...
+        
+        else if ((newCap = oldCap << 1) < MAXIMUM_CAPACIY &&
+                    oldCap >= DEFAULT_INITIAL_CAPAITY)
+            //如果oldCap*2小于最大极限(1<<30，也就是 2 的 30 次方)大于默认容量16*(1 <<4)
+            //就double
+            newThr = oldThr << 1; // double there
+           // ... 
+        else if (oldThr > 0) // initial capacity was placed in threshold
+            newCap = oldThr;
+        else {  
+            // zero initial threshold signifies using defaultsfults
+            newCap = DEFAULT_INITIAL_CAPAITY;
+            newThr = (int)(DEFAULT_LOAD_ATOR* DEFAULT_INITIAL_CAPACITY；
+        }
+        if (newThr ==0) {
+            float ft = (float)newCap * loadFator;
+            newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?(int)ft : Integer.MAX_VALUE);
+        }
+        threshold = neThr;
+        Node<K,V>[] newTab = (Node<K,V>[])new Node[newap];
+        table = n；
+        // 移动到新的数组结构e数组结构 
+       }
+    ```
+
+    
+
+  - treeifyBin
+
+    ```java
+    
+    final void treeifyBin(Node<K,V>[] tab, int hash) {
+        int n, index; Node<K,V> e;
+        if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
+            //如果容量小于 MIN_TREEIFY_CAPACITY，只会进行简单的扩容。
+            resize();
+        else if ((e = tab[index = (n - 1) & hash]) != null) {
+            //如果容量大于 MIN_TREEIFY_CAPACITY ，则会进行树化改造。
+            //树化改造逻辑
+        }
+    }
+    ```
+
+    
+
+- 容量（capacity）和负载系数（load factor）。
+
+  - HashMap 初始化容量为DEFAULT_INITIAL_CAPACITY =16(1 << 4)
+
+  - 如果创建map时指定的长度不是2的n次方，就会选择大于该数字的第一个2的幂
+
+  - 容量为什么必须是2的n次幂,因为只有是2n,才可以通过 hash & (leng-1) 计算出的索引尽可能保证数据分布均匀.如果不是2的n次幂，计算出的索引特别容易相同，很容易发生hash碰撞，导致其余数组空间很大程度上没有存储数据，链表或者红黑树过长，效率较低.
+
+    h & (length-1)计算出索引
+
+  
 
